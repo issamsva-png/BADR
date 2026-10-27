@@ -1,0 +1,1 @@
+ALTER TABLE `document_analyses` ADD `automatic_review` json DEFAULT ('null');

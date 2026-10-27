@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1792871655154,
+      "tag": "0000_melted_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1792877313246,
+      "tag": "0001_worthless_black_cat",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1792883476192,
+      "tag": "0002_round_bastion",
+      "breakpoints": true
+    }
+  ]
+}

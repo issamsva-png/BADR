@@ -1,0 +1,27 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "npm run typecheck && npm run build --workspaces --if-present",
+    "db:generate": "npm run generate --workspace=@workspace/db",
+    "db:migrate": "npm run migrate --workspace=@workspace/db",
+    "db:push": "npm run push --workspace=@workspace/db",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present"
+  },
+  "private": true,
+  "workspaces": [
+    "artifacts/*",
+    "lib/*",
+    "lib/integrations/*",
+    "scripts"
+  ],
+  "devDependencies": {
+    "@esbuild/win32-x64": "0.28.2",
+    "@tailwindcss/oxide-win32-x64-msvc": "^4.3.3",
+    "lightningcss-win32-x64-msvc": "^1.33.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3"
+  }
+}

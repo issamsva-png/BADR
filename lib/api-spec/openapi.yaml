@@ -1,0 +1,545 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: analyses
+    description: User-owned document analysis dossiers
+  - name: documents
+    description: Documents and analyst observations
+  - name: storage
+    description: Private document upload and delivery
+paths:
+  /analyses/dashboard:
+    get:
+      operationId: getAnalysisDashboard
+      tags: [analyses]
+      summary: Get dashboard totals and recent analyses
+      responses:
+        "200":
+          description: Dashboard data for the current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisDashboard"
+  /analyses:
+    get:
+      operationId: listAnalyses
+      tags: [analyses]
+      summary: List analyses belonging to the current user
+      responses:
+        "200":
+          description: User analysis list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Analysis"
+    post:
+      operationId: createAnalysis
+      tags: [analyses]
+      summary: Create an analysis dossier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisInput"
+      responses:
+        "201":
+          description: Analysis created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+  /analyses/{analysisId}:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAnalysis
+      tags: [analyses]
+      summary: Get an analysis and its documents and observations
+      responses:
+        "200":
+          description: Analysis detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisDetail"
+        "404":
+          description: Analysis not found
+    patch:
+      operationId: updateAnalysis
+      tags: [analyses]
+      summary: Update analyst review and conclusion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisUpdate"
+      responses:
+        "200":
+          description: Analysis updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+    delete:
+      operationId: deleteAnalysis
+      tags: [analyses]
+      summary: Delete an analysis and its private documents
+      responses:
+        "204":
+          description: Analysis deleted
+  /analyses/{analysisId}/automatic-review:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: runAutomaticReview
+      tags: [analyses]
+      summary: Run a local Ollama review for this analysis
+      responses:
+        "200":
+          description: Human-reviewable local AI suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [automaticReview]
+                properties:
+                  automaticReview:
+                    type: object
+                    additionalProperties: true
+        "409":
+          description: The analysis does not have the required number of documents
+        "503":
+          description: Ollama or the configured local model is unavailable
+  /analyses/{analysisId}/documents:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Attach an uploaded file to an analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Document attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+  /documents/{documentId}/verify-signature:
+    parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: verifyDocumentSignature
+      tags: [documents]
+      summary: Verify an embedded PDF signature locally
+      responses:
+        "200":
+          description: Local signature verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [signatureVerification]
+                properties:
+                  signatureVerification:
+                    type: object
+                    additionalProperties: true
+        "400":
+          description: The document is not a PDF
+        "404":
+          description: Document not found
+  /documents/{documentId}/verify-registry:
+    parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: verifyFrenchRegistryEntry
+      tags: [documents]
+      summary: Retry the French public registry lookup using the extracted identifier only
+      responses:
+        "200":
+          description: French public registry result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [frenchRegistry]
+                properties:
+                  frenchRegistry:
+                    type: object
+                    additionalProperties: true
+        "404":
+          description: Document not found
+  /documents/{documentId}:
+    parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      summary: Correct extracted fields or update a document review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document and its private file
+      responses:
+        "204":
+          description: Document deleted
+  /analyses/{analysisId}/observations:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createObservation
+      tags: [documents]
+      summary: Add an analyst observation to an analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObservationInput"
+      responses:
+        "201":
+          description: Observation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+  /observations/{observationId}:
+    parameters:
+      - name: observationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateObservation
+      tags: [documents]
+      summary: Update or resolve an observation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObservationUpdate"
+      responses:
+        "200":
+          description: Observation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+    delete:
+      operationId: deleteObservation
+      tags: [documents]
+      summary: Delete an observation
+      responses:
+        "204":
+          description: Observation deleted
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a private upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadInput"
+      responses:
+        "200":
+          description: Upload URL and private object path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrl"
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getPrivateObject
+      tags: [storage]
+      summary: Stream a private document after checking ownership
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Private object bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Not authorized to view this document
+        "404":
+          description: Document not found
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /verification-status:
+    get:
+      operationId: getVerificationStatus
+      tags: [health]
+      summary: Get local PDF verifier and French public registry configuration
+      responses:
+        "200":
+          description: Local signature tool and public registry configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+components:
+  schemas:
+    Analysis:
+      type: object
+      required: [id, mode, title, status, conclusion, automaticReview, createdAt, updatedAt, documentCount]
+      properties:
+        id: { type: string, format: uuid }
+        mode: { type: string, enum: [subsidy, independent_batch] }
+        title: { type: string }
+        status: { type: string, enum: [draft, in_review, completed] }
+        conclusion:
+          type: ["string", "null"]
+          enum: [Conforme, Douteux, Fraude probable, Informations complémentaires nécessaires, null]
+        conclusionRationale: { type: ["string", "null"] }
+        alternativeExplanation: { type: ["string", "null"] }
+        additionalVerification: { type: ["string", "null"] }
+        operationalAction: { type: ["string", "null"] }
+        automaticReview: { type: ["object", "null"], additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        documentCount: { type: integer }
+    AnalysisDetail:
+      allOf:
+        - $ref: "#/components/schemas/Analysis"
+        - type: object
+          required: [documents, observations]
+          properties:
+            documents:
+              type: array
+              items: { $ref: "#/components/schemas/Document" }
+            observations:
+              type: array
+              items: { $ref: "#/components/schemas/Observation" }
+    AnalysisDashboard:
+      type: object
+      required: [totalAnalyses, totalDocuments, compliant, doubtful, probableFraud, needsInformation, awaitingReview, recent]
+      properties:
+        totalAnalyses: { type: integer }
+        totalDocuments: { type: integer }
+        compliant: { type: integer }
+        doubtful: { type: integer }
+        probableFraud: { type: integer }
+        needsInformation: { type: integer }
+        awaitingReview: { type: integer }
+        recent:
+          type: array
+          items: { $ref: "#/components/schemas/Analysis" }
+    AnalysisInput:
+      type: object
+      required: [mode, title]
+      properties:
+        mode: { type: string, enum: [subsidy, independent_batch] }
+        title: { type: string, minLength: 1, maxLength: 160 }
+    AnalysisUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        status: { type: string, enum: [draft, in_review, completed] }
+        conclusion:
+          type: ["string", "null"]
+          enum: [Conforme, Douteux, Fraude probable, Informations complémentaires nécessaires, null]
+        conclusionRationale: { type: ["string", "null"], maxLength: 5000 }
+        alternativeExplanation: { type: ["string", "null"], maxLength: 5000 }
+        additionalVerification: { type: ["string", "null"], maxLength: 5000 }
+        operationalAction: { type: ["string", "null"], maxLength: 2000 }
+    Document:
+      type: object
+      required: [id, analysisId, fileName, mimeType, size, objectPath, category, pageCount, extractedText, extractedFields, controlStatus, reviewConclusion, reviewRationale, reviewAlternativeExplanation, reviewVerification, reviewAction, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        analysisId: { type: string, format: uuid }
+        fileName: { type: string }
+        mimeType: { type: string }
+        size: { type: integer }
+        objectPath: { type: string }
+        category: { type: string }
+        pageCount: { type: integer }
+        extractedText: { type: ["string", "null"] }
+        extractedFields: { type: object, additionalProperties: true }
+        controlStatus: { type: object, additionalProperties: true }
+        reviewConclusion:
+          type: ["string", "null"]
+          enum: [Conforme, Douteux, Fraude probable, Informations complémentaires nécessaires, null]
+        reviewRationale: { type: ["string", "null"] }
+        reviewAlternativeExplanation: { type: ["string", "null"] }
+        reviewVerification: { type: ["string", "null"] }
+        reviewAction: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DocumentInput:
+      type: object
+      required: [fileName, mimeType, size, objectPath, category]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        mimeType: { type: string, enum: [application/pdf, image/jpeg, image/png] }
+        size: { type: integer, minimum: 1, maximum: 20971520 }
+        objectPath: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1, maxLength: 120 }
+        pageCount: { type: integer, minimum: 0, maximum: 100 }
+        extractedText: { type: ["string", "null"], maxLength: 500000 }
+        extractedFields: { type: object, additionalProperties: true }
+        controlStatus: { type: object, additionalProperties: true }
+    DocumentUpdate:
+      type: object
+      properties:
+        category: { type: string, minLength: 1, maxLength: 120 }
+        pageCount: { type: integer, minimum: 0, maximum: 100 }
+        extractedText: { type: ["string", "null"], maxLength: 500000 }
+        extractedFields: { type: object, additionalProperties: true }
+        controlStatus: { type: object, additionalProperties: true }
+        reviewConclusion:
+          type: ["string", "null"]
+          enum: [Conforme, Douteux, Fraude probable, Informations complémentaires nécessaires, null]
+        reviewRationale: { type: ["string", "null"], maxLength: 5000 }
+        reviewAlternativeExplanation: { type: ["string", "null"], maxLength: 5000 }
+        reviewVerification: { type: ["string", "null"], maxLength: 5000 }
+        reviewAction: { type: ["string", "null"], maxLength: 2000 }
+    Observation:
+      type: object
+      required: [id, analysisId, documentId, classification, severity, page, field, observedValue, description, method, confidence, resolved, source, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        analysisId: { type: string, format: uuid }
+        documentId: { type: ["string", "null"], format: uuid }
+        classification: { type: string, enum: [FACT, SIGNAL, HYPOTHESIS, PROOF] }
+        severity: { type: string, enum: [low, medium, high] }
+        page: { type: ["integer", "null"] }
+        field: { type: ["string", "null"] }
+        observedValue: { type: ["string", "null"] }
+        description: { type: string }
+        method: { type: string }
+        confidence: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        resolved: { type: boolean }
+        source: { type: string, enum: [analyst, deterministic] }
+        createdAt: { type: string, format: date-time }
+    ObservationInput:
+      type: object
+      required: [classification, severity, description, method]
+      properties:
+        documentId: { type: ["string", "null"], format: uuid }
+        classification: { type: string, enum: [FACT, SIGNAL, HYPOTHESIS, PROOF] }
+        severity: { type: string, enum: [low, medium, high] }
+        page: { type: ["integer", "null"], minimum: 1 }
+        field: { type: ["string", "null"], maxLength: 120 }
+        observedValue: { type: ["string", "null"], maxLength: 1000 }
+        description: { type: string, minLength: 1, maxLength: 5000 }
+        method: { type: string, minLength: 1, maxLength: 200 }
+        confidence: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        resolved: { type: boolean }
+    ObservationUpdate:
+      type: object
+      properties:
+        description: { type: string, minLength: 1, maxLength: 5000 }
+        resolved: { type: boolean }
+        severity: { type: string, enum: [low, medium, high] }
+    UploadInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: integer, minimum: 1, maximum: 20971520 }
+        contentType: { type: string, enum: [application/pdf, image/jpeg, image/png] }
+    UploadUrl:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
